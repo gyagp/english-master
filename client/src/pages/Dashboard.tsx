@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import api from '../api';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { BookOpen, CheckCircle, Trophy, LogOut, GraduationCap, Flame, ChevronRight, Settings } from 'lucide-react';
+import { BookOpen, CheckCircle, Trophy, LogOut, GraduationCap, Flame, ChevronRight, Settings, Users } from 'lucide-react';
 
 interface Lesson {
   lessonId: number;
@@ -76,8 +76,16 @@ export const Dashboard: React.FC = () => {
             <Link 
                 to="/manage" 
                 className="flex items-center space-x-2 text-slate-500 hover:text-indigo-600 transition-colors duration-200 font-medium"
+                title="Manage Content"
             >
                 <Settings className="w-5 h-5" />
+            </Link>
+            <Link 
+                to="/users" 
+                className="flex items-center space-x-2 text-slate-500 hover:text-indigo-600 transition-colors duration-200 font-medium"
+                title="Manage Users"
+            >
+                <Users className="w-5 h-5" />
             </Link>
             <button 
                 onClick={logout} 

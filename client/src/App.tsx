@@ -6,6 +6,7 @@ import { Register } from './pages/Register';
 import { Dashboard } from './pages/Dashboard';
 import { Lesson } from './pages/Lesson';
 import { ManageContent } from './pages/ManageContent';
+import { ManageUsers } from './pages/ManageUsers';
 
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated } = useAuth();
@@ -32,6 +33,14 @@ function App() {
             element={
               <PrivateRoute>
                 <ManageContent />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/users"
+            element={
+              <PrivateRoute>
+                <ManageUsers />
               </PrivateRoute>
             }
           />

@@ -5,6 +5,7 @@ import path from 'path';
 import authRoutes from './routes/auth';
 import contentRoutes from './routes/content';
 import progressRoutes from './routes/progress';
+import userRoutes from './routes/users';
 
 dotenv.config();
 
@@ -15,11 +16,12 @@ app.use(cors());
 app.use(express.json());
 
 app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
 app.use('/api', contentRoutes);
 app.use('/api', progressRoutes);
 
 // Serve static files from the React client
-const clientBuildPath = path.join(__dirname, '../../../client/dist');
+const clientBuildPath = path.join(process.cwd(), '../client/dist');
 console.log('Serving client from:', clientBuildPath);
 
 if (require('fs').existsSync(clientBuildPath)) {
@@ -31,17 +33,20 @@ if (require('fs').existsSync(clientBuildPath)) {
   });
 } else {
   console.error(`Client build not found at ${clientBuildPath}. Please run 'npm run build' in the client directory.`);
-  // Fallback for development or misconfiguration
-  const altPath = path.join(process.cwd(), '../client/dist');
-  console.log('Trying alternative path:', altPath);
-  if (require('fs').existsSync(altPath)) {
-      app.use(express.static(altPath));
-      app.get(/.*/, (req, res) => {
-          res.sendFile(path.join(altPath, 'index.html'));
-      });
-  }
 }
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
+});
+
+server.on('error', (err) => {
+  console.error('Server failed to start:', err);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });

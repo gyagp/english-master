@@ -1,23 +1,24 @@
 import React, { useState } from 'react';
-import { useAuth } from '../context/AuthContext';
 import api from '../api';
 import { useNavigate, Link } from 'react-router-dom';
-import { GraduationCap, ArrowRight, Lock, User } from 'lucide-react';
+import { GraduationCap, ArrowRight, Lock, User, HelpCircle } from 'lucide-react';
 
-export const Login: React.FC = () => {
+export const ResetPassword: React.FC = () => {
   const [username, setUsername] = useState('');
-  const { login } = useAuth();
+  const [securityAnswer, setSecurityAnswer] = useState('');
+  const [newPassword, setNewPassword] = useState('');
   const navigate = useNavigate();
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await api.post('/auth/login', { username });
-      login(res.data.token);
-      navigate('/');
+      await api.post('/auth/reset-password', { username, securityAnswer, newPassword });
+      setSuccess('Password reset successfully. Redirecting to login...');
+      setTimeout(() => navigate('/login'), 2000);
     } catch (err) {
-      setError('Invalid credentials');
+      setError('Invalid username or security answer');
     }
   };
 
@@ -35,13 +36,19 @@ export const Login: React.FC = () => {
             <div className="bg-indigo-600 p-4 rounded-2xl shadow-lg shadow-indigo-200 mb-6 transform rotate-3">
               <GraduationCap className="w-10 h-10 text-white" />
             </div>
-            <h2 className="text-3xl font-extrabold text-slate-800 tracking-tight">Welcome Back</h2>
-            <p className="text-slate-500 mt-2 font-medium">Sign in to continue your mastery</p>
+            <h2 className="text-3xl font-extrabold text-slate-800 tracking-tight">Reset Password</h2>
+            <p className="text-slate-500 mt-2 font-medium">Recover your account</p>
           </div>
 
           {error && (
             <div className="mb-8 p-4 bg-red-50 border border-red-100 text-red-600 rounded-2xl text-sm text-center font-bold animate-in fade-in slide-in-from-top-2">
               {error}
+            </div>
+          )}
+          
+          {success && (
+            <div className="mb-8 p-4 bg-green-50 border border-green-100 text-green-600 rounded-2xl text-sm text-center font-bold animate-in fade-in slide-in-from-top-2">
+              {success}
             </div>
           )}
 
@@ -62,20 +69,52 @@ export const Login: React.FC = () => {
                 />
               </div>
             </div>
+            <div className="space-y-2">
+              <label className="block text-sm font-bold text-slate-700 ml-1">Security Answer</label>
+              <div className="relative">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                    <HelpCircle size={20} />
+                </div>
+                <input
+                    type="text"
+                    value={securityAnswer}
+                    onChange={(e) => setSecurityAnswer(e.target.value)}
+                    className="w-full pl-12 pr-4 py-4 rounded-2xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 outline-none transition-all font-medium"
+                    placeholder="Answer to your security question"
+                    required
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="block text-sm font-bold text-slate-700 ml-1">New Password</label>
+              <div className="relative">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                    <Lock size={20} />
+                </div>
+                <input
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full pl-12 pr-4 py-4 rounded-2xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 outline-none transition-all font-medium"
+                    placeholder="Enter new password"
+                    required
+                />
+              </div>
+            </div>
             <button 
               type="submit" 
               className="w-full py-4 bg-indigo-600 text-white font-bold rounded-2xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 hover:shadow-xl hover:-translate-y-0.5 flex items-center justify-center gap-2 group mt-2"
             >
-              <span>Sign In</span>
+              <span>Reset Password</span>
               <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
             </button>
           </form>
         </div>
         <div className="bg-slate-50/80 p-6 text-center border-t border-slate-100 backdrop-blur-sm">
           <p className="text-slate-500 font-medium">
-            Don't have an account?{' '}
-            <Link to="/register" className="text-indigo-600 font-bold hover:text-indigo-700 hover:underline">
-              Create account
+            Remember your password?{' '}
+            <Link to="/login" className="text-indigo-600 font-bold hover:text-indigo-700 hover:underline">
+              Sign in
             </Link>
           </p>
         </div>

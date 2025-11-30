@@ -1,18 +1,17 @@
 import React, { useState } from 'react';
 import api from '../api';
 import { useNavigate, Link } from 'react-router-dom';
-import { GraduationCap, UserPlus, User, Lock } from 'lucide-react';
+import { GraduationCap, UserPlus, User, Lock, HelpCircle, Key } from 'lucide-react';
 
 export const Register: React.FC = () => {
   const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
   const navigate = useNavigate();
   const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await api.post('/auth/register', { username, password });
+      await api.post('/auth/register', { username });
       navigate('/login');
     } catch (err) {
       setError('Username already exists or other error');
@@ -56,22 +55,6 @@ export const Register: React.FC = () => {
                     onChange={(e) => setUsername(e.target.value)}
                     className="w-full pl-12 pr-4 py-4 rounded-2xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 outline-none transition-all font-medium"
                     placeholder="Choose a username"
-                    required
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <label className="block text-sm font-bold text-slate-700 ml-1">Password</label>
-              <div className="relative">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
-                    <Lock size={20} />
-                </div>
-                <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-12 pr-4 py-4 rounded-2xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 outline-none transition-all font-medium"
-                    placeholder="Choose a password"
                     required
                 />
               </div>
