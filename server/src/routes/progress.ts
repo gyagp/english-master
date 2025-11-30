@@ -31,6 +31,20 @@ const checkAndUpdateLessonCompletion = async (userId: number, unitId: number, le
   const allPracticesCompleted = completedPracticesCount === practices.length;
   const isLessonCompleted = allWordsCompleted && allPracticesCompleted;
 
+  // Check previous state
+  const previousProgress = await prisma.userLessonProgress.findUnique({
+    where: { userId_unitId_lessonId: { userId, unitId, lessonId } },
+  });
+
+  const wasCompleted = previousProgress?.isCompleted || false;
+
+  if (isLessonCompleted && !wasCompleted) {
+      // Record completion history
+      await prisma.lessonCompletion.create({
+          data: { userId, unitId, lessonId }
+      });
+  }
+
   await prisma.userLessonProgress.upsert({
     where: { userId_unitId_lessonId: { userId, unitId, lessonId } },
     update: { isCompleted: isLessonCompleted },
@@ -136,6 +150,59 @@ router.post('/practices/:id/toggle', authenticateToken, async (req: any, res) =>
 
     await checkAndUpdateLessonCompletion(userId, practice.unitId, practice.lessonId);
     res.json(updated);
+});
+
+// Reset Lesson (Review)
+router.post('/lessons/:unitId/:lessonId/reset', authenticateToken, async (req: any, res) => {
+    const userId = (req as AuthRequest).user!.userId;
+    const unitId = parseInt(req.params.unitId);
+    const lessonId = parseInt(req.params.lessonId);
+
+    try {
+        // 1. Reset Words
+        const words = await prisma.word.findMany({ where: { unitId, lessonId } });
+        await prisma.userWordProgress.deleteMany({
+            where: {
+                userId,
+                wordId: { in: words.map(w => w.id) }
+            }
+        });
+
+        // 2. Reset Practices
+        const practices = await prisma.practice.findMany({ where: { unitId, lessonId } });
+        await prisma.userPracticeProgress.deleteMany({
+            where: {
+                userId,
+                practiceId: { in: practices.map(p => p.id) }
+            }
+        });
+
+        // 3. Reset Lesson Progress (but keep history)
+        // We use updateMany to avoid error if record doesn't exist (though it should if we are resetting)
+        await prisma.userLessonProgress.updateMany({
+            where: { userId, unitId, lessonId },
+            data: { isCompleted: false }
+        });
+
+        res.json({ message: 'Lesson reset for review' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to reset lesson' });
+    }
+});
+
+// Get Lesson History
+router.get('/lessons/:unitId/:lessonId/history', authenticateToken, async (req: any, res) => {
+    const userId = (req as AuthRequest).user!.userId;
+    const unitId = parseInt(req.params.unitId);
+    const lessonId = parseInt(req.params.lessonId);
+
+    const history = await prisma.lessonCompletion.findMany({
+        where: { userId, unitId, lessonId },
+        orderBy: { completedAt: 'desc' }
+    });
+
+    res.json(history);
 });
 
 export default router;

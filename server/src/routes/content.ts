@@ -266,4 +266,48 @@ router.post('/practices/bulk', authenticateToken, async (req, res) => {
   }
 });
 
+// Import Lesson (Words + Practices)
+router.post('/lesson/import', authenticateToken, async (req, res) => {
+  const { unitId, lessonId, words, practices } = req.body;
+
+  try {
+    const operations: any[] = [];
+
+    if (words && Array.isArray(words)) {
+        words.forEach((w: any) => {
+            operations.push(prisma.word.create({
+                data: {
+                    unitId: parseInt(unitId),
+                    lessonId: parseInt(lessonId),
+                    word: w.word,
+                    phonetic: w.phonetic,
+                    englishMeaning: w.englishMeaning,
+                    chineseMeaning: w.chineseMeaning,
+                    example: w.example,
+                }
+            }));
+        });
+    }
+
+    if (practices && Array.isArray(practices)) {
+        practices.forEach((p: any) => {
+            operations.push(prisma.practice.create({
+                data: {
+                    unitId: parseInt(unitId),
+                    lessonId: parseInt(lessonId),
+                    practice: p.practice,
+                    answer: p.answer,
+                }
+            }));
+        });
+    }
+
+    await prisma.$transaction(operations);
+    res.json({ message: 'Lesson imported successfully' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to import lesson' });
+  }
+});
+
 export default router;

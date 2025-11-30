@@ -16,6 +16,17 @@ model User {
   wordProgress     UserWordProgress[]
   lessonProgress   UserLessonProgress[]
   practiceProgress UserPracticeProgress[]
+  lessonCompletions LessonCompletion[]
+}
+
+model LessonCompletion {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  unitId    Int
+  lessonId  Int
+  completedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
 }
 
 model Word {

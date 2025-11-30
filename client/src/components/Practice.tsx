@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import api from '../api';
-import { CheckCircle, XCircle, HelpCircle, Check, ArrowRight } from 'lucide-react';
+import { CheckCircle, XCircle, HelpCircle, Check, ArrowRight, Eye, EyeOff } from 'lucide-react';
 
 interface PracticeItem {
   id: number;
@@ -14,6 +14,7 @@ export const Practice: React.FC<{ unitId: number; lessonId: number }> = ({ unitI
   const [results, setResults] = useState<{ [key: number]: boolean | null }>({});
   const [completedPractices, setCompletedPractices] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(true);
+  const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -72,6 +73,15 @@ export const Practice: React.FC<{ unitId: number; lessonId: number }> = ({ unitI
       }
   };
 
+  const handleShowAnswer = (id: number, answer: string) => {
+    setAnswers(prev => {
+      if (prev[id] === answer) {
+        return { ...prev, [id]: '' };
+      }
+      return { ...prev, [id]: answer };
+    });
+  };
+
   if (loading) {
     return (
         <div className="flex justify-center items-center h-96 text-slate-400">
@@ -81,9 +91,69 @@ export const Practice: React.FC<{ unitId: number; lessonId: number }> = ({ unitI
     );
   }
 
+  const displayedPractices = showAll 
+    ? practices 
+    : practices.filter(p => !completedPractices.has(p.id));
+
+  if (displayedPractices.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-96 text-slate-500">
+        <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mb-6">
+          <Check size={40} className="text-emerald-600" strokeWidth={3} />
+        </div>
+        <h3 className="text-2xl font-bold text-slate-800 mb-2">All practices completed!</h3>
+        <p className="text-slate-500 mb-8 text-center max-w-md">
+          Great job! You've completed all practice items in this lesson.
+        </p>
+        <button 
+          onClick={() => setShowAll(true)}
+          className="px-8 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 hover:shadow-xl hover:-translate-y-0.5"
+        >
+          Review All Practices
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-4xl mx-auto space-y-8">
-      {practices.map((p, index) => {
+      {/* Progress & Controls Header */}
+      <div className="w-full mb-6 flex flex-col sm:flex-row items-center justify-between bg-white p-4 rounded-2xl border border-slate-100 shadow-sm gap-4">
+        <div className="flex items-center gap-4 flex-1 w-full">
+            <div className="flex flex-col min-w-[80px]">
+                <span className="text-xs text-slate-500 font-bold uppercase tracking-wider">Progress</span>
+                <span className="text-xl font-bold text-slate-800">
+                    {completedPractices.size} <span className="text-slate-400 text-base font-medium">/ {practices.length}</span>
+                </span>
+            </div>
+            <div className="flex-1 h-3 bg-slate-100 rounded-full overflow-hidden">
+                <div 
+                    className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-500 ease-out rounded-full"
+                    style={{ width: `${(completedPractices.size / Math.max(practices.length, 1)) * 100}%` }}
+                />
+            </div>
+            <span className="text-sm font-bold text-indigo-600 min-w-[40px] text-right">
+                {Math.round((completedPractices.size / Math.max(practices.length, 1)) * 100)}%
+            </span>
+        </div>
+        
+        <div className="hidden sm:block h-10 w-px bg-slate-200 mx-2"></div>
+
+        <label className="flex items-center cursor-pointer gap-3 select-none hover:bg-slate-50 p-2 rounded-lg transition-colors">
+          <span className="text-sm font-medium text-slate-600">Show Completed</span>
+          <div className="relative">
+            <input 
+              type="checkbox" 
+              className="sr-only peer" 
+              checked={showAll}
+              onChange={(e) => setShowAll(e.target.checked)}
+            />
+            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+          </div>
+        </label>
+      </div>
+
+      {displayedPractices.map((p, index) => {
         const isCorrect = results[p.id] === true;
         const isIncorrect = results[p.id] === false;
         const isCompleted = completedPractices.has(p.id);
@@ -159,6 +229,16 @@ export const Practice: React.FC<{ unitId: number; lessonId: number }> = ({ unitI
                     )}
                   </div>
                   
+                  {!isCorrect && !isCompleted && (
+                    <button
+                      onClick={() => handleShowAnswer(p.id, p.answer)}
+                      className="px-4 py-4 rounded-2xl font-bold text-lg bg-slate-100 text-slate-500 hover:bg-slate-200 transition-all"
+                      title={answers[p.id] === p.answer ? "Hide Answer" : "Show Answer"}
+                    >
+                      {answers[p.id] === p.answer ? <EyeOff size={24} /> : <Eye size={24} />}
+                    </button>
+                  )}
+
                   <button
                     onClick={() => handleCheck(p.id, p.answer)}
                     disabled={isCorrect || isCompleted || !answers[p.id]}

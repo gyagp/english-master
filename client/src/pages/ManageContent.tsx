@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Plus, Trash2, Edit2, Save, X, BookOpen, Trophy, Upload, FileJson } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Edit2, Save, X, BookOpen, Trophy, Upload, FileJson, Download } from 'lucide-react';
 
 interface Word {
   id: number;
@@ -35,7 +35,7 @@ export const ManageContent: React.FC = () => {
 
   // Import states
   const [showImportModal, setShowImportModal] = useState(false);
-  const [importType, setImportType] = useState<'words' | 'practices'>('words');
+  const [importType, setImportType] = useState<'words' | 'practices' | 'lesson'>('words');
   const [importJson, setImportJson] = useState('');
   const [importError, setImportError] = useState('');
 
@@ -125,24 +125,88 @@ export const ManageContent: React.FC = () => {
     setImportError('');
     try {
       const data = JSON.parse(importJson);
-      if (!Array.isArray(data)) {
-        setImportError('JSON must be an array of objects');
-        return;
-      }
+      
+      if (importType === 'lesson') {
+          if (Array.isArray(data)) {
+              setImportError('JSON must be an object for lesson import');
+              return;
+          }
 
-      if (importType === 'words') {
-        await api.post('/words/bulk', { unitId, lessonId, words: data });
+          const targetUnitId = data.unitId !== undefined ? data.unitId : unitId;
+          const targetLessonId = data.lessonId !== undefined ? data.lessonId : lessonId;
+
+          await api.post('/lesson/import', { 
+              unitId: targetUnitId, 
+              lessonId: targetLessonId, 
+              words: data.words, 
+              practices: data.practices 
+          });
+
+          if (targetUnitId !== unitId || targetLessonId !== lessonId) {
+              setUnitId(targetUnitId);
+              setLessonId(targetLessonId);
+          } else {
+              loadContent();
+          }
       } else {
-        await api.post('/practices/bulk', { unitId, lessonId, practices: data });
+          if (!Array.isArray(data)) {
+            setImportError('JSON must be an array of objects');
+            return;
+          }
+
+          if (importType === 'words') {
+            await api.post('/words/bulk', { unitId, lessonId, words: data });
+          } else {
+            await api.post('/practices/bulk', { unitId, lessonId, practices: data });
+          }
+          loadContent();
       }
       
       setShowImportModal(false);
       setImportJson('');
-      loadContent();
     } catch (error) {
       console.error("Import failed", error);
       setImportError('Invalid JSON format or server error');
     }
+  };
+
+  const handleExport = (type: 'words' | 'practices' | 'lesson') => {
+    let dataToExport;
+    let filename;
+
+    if (type === 'lesson') {
+        dataToExport = {
+            unitId,
+            lessonId,
+            words: words.map(({ word, phonetic, englishMeaning, chineseMeaning, example }) => ({
+                word, phonetic, englishMeaning, chineseMeaning, example
+            })),
+            practices: practices.map(({ practice, answer }) => ({
+                practice, answer
+            }))
+        };
+        filename = `unit${unitId}_lesson${lessonId}_full.json`;
+    } else if (type === 'words') {
+      dataToExport = words.map(({ word, phonetic, englishMeaning, chineseMeaning, example }) => ({
+        word, phonetic, englishMeaning, chineseMeaning, example
+      }));
+      filename = `unit${unitId}_lesson${lessonId}_words.json`;
+    } else {
+      dataToExport = practices.map(({ practice, answer }) => ({
+        practice, answer
+      }));
+      filename = `unit${unitId}_lesson${lessonId}_practices.json`;
+    }
+
+    const blob = new Blob([JSON.stringify(dataToExport, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -154,7 +218,7 @@ export const ManageContent: React.FC = () => {
             <div className="p-6 border-b border-slate-100 flex justify-between items-center">
               <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
                 <FileJson className="w-6 h-6 text-indigo-600" />
-                Import {importType === 'words' ? 'Words' : 'Practices'}
+                Import {importType === 'words' ? 'Words' : importType === 'practices' ? 'Practices' : 'Full Lesson'}
               </h3>
               <button onClick={() => setShowImportModal(false)} className="text-slate-400 hover:text-slate-600">
                 <X className="w-6 h-6" />
@@ -162,14 +226,18 @@ export const ManageContent: React.FC = () => {
             </div>
             <div className="p-6">
               <p className="text-sm text-slate-500 mb-4">
-                Paste your JSON array below. 
+                Paste your JSON below. 
                 {importType === 'words' ? (
                   <span className="block mt-1 bg-slate-50 p-2 rounded border border-slate-200 font-mono text-xs">
                     [&#123; "word": "Apple", "phonetic": "/.../", "englishMeaning": "...", "chineseMeaning": "...", "example": "..." &#125;]
                   </span>
-                ) : (
+                ) : importType === 'practices' ? (
                   <span className="block mt-1 bg-slate-50 p-2 rounded border border-slate-200 font-mono text-xs">
                     [&#123; "practice": "I eat an ___.", "answer": "apple" &#125;]
+                  </span>
+                ) : (
+                  <span className="block mt-1 bg-slate-50 p-2 rounded border border-slate-200 font-mono text-xs">
+                    &#123; "unitId": 1, "lessonId": 1, "words": [...], "practices": [...] &#125;
                   </span>
                 )}
               </p>
@@ -242,6 +310,21 @@ export const ManageContent: React.FC = () => {
           >
             {loading ? 'Loading...' : 'Refresh'}
           </button>
+          <div className="flex-1"></div>
+          <div className="flex gap-2">
+            <button 
+                onClick={() => { setImportType('lesson'); setShowImportModal(true); }}
+                className="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition-colors flex items-center gap-2"
+            >
+                <FileJson className="w-4 h-4" /> Import Lesson
+            </button>
+            <button 
+                onClick={() => handleExport('lesson')}
+                className="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition-colors flex items-center gap-2"
+            >
+                <Download className="w-4 h-4" /> Export Lesson
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -254,12 +337,6 @@ export const ManageContent: React.FC = () => {
                 </div>
                 <h2 className="text-xl font-bold text-slate-800">Words</h2>
               </div>
-              <button 
-                onClick={() => { setImportType('words'); setShowImportModal(true); }}
-                className="text-sm text-blue-600 font-medium hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
-              >
-                <FileJson className="w-4 h-4" /> Import JSON
-              </button>
             </div>
 
             {/* Add Word Form */}
@@ -372,12 +449,6 @@ export const ManageContent: React.FC = () => {
                 </div>
                 <h2 className="text-xl font-bold text-slate-800">Practices</h2>
               </div>
-              <button 
-                onClick={() => { setImportType('practices'); setShowImportModal(true); }}
-                className="text-sm text-violet-600 font-medium hover:bg-violet-50 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
-              >
-                <FileJson className="w-4 h-4" /> Import JSON
-              </button>
             </div>
 
             {/* Add Practice Form */}

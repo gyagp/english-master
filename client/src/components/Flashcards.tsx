@@ -16,6 +16,7 @@ export const Flashcards: React.FC<{ unitId: number; lessonId: number }> = ({ uni
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [completedWords, setCompletedWords] = useState<Set<number>>(new Set());
+  const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
     const fetchWords = async () => {
@@ -26,6 +27,16 @@ export const Flashcards: React.FC<{ unitId: number; lessonId: number }> = ({ uni
     };
     fetchWords();
   }, [unitId, lessonId]);
+
+  const displayedWords = showAll 
+    ? words 
+    : words.filter(w => !completedWords.has(w.id));
+
+  useEffect(() => {
+    if (currentIndex >= displayedWords.length) {
+      setCurrentIndex(Math.max(0, displayedWords.length - 1));
+    }
+  }, [displayedWords.length, currentIndex]);
 
   const handleToggleCompleted = async (e: React.MouseEvent, wordId: number) => {
     e.stopPropagation();
@@ -45,21 +56,57 @@ export const Flashcards: React.FC<{ unitId: number; lessonId: number }> = ({ uni
     </div>
   );
 
-  const currentWord = words[currentIndex];
+  if (displayedWords.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-96 text-slate-500">
+        <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mb-6">
+          <Check size={40} className="text-emerald-600" strokeWidth={3} />
+        </div>
+        <h3 className="text-2xl font-bold text-slate-800 mb-2">All words completed!</h3>
+        <p className="text-slate-500 mb-8 text-center max-w-md">
+          Great job! You've mastered all words in this lesson.
+        </p>
+        <button 
+          onClick={() => setShowAll(true)}
+          className="px-8 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 hover:shadow-xl hover:-translate-y-0.5"
+        >
+          Review All Words
+        </button>
+      </div>
+    );
+  }
+
+  const currentWord = displayedWords[currentIndex];
   const isCompleted = completedWords.has(currentWord.id);
 
   return (
     <div className="flex flex-col items-center max-w-3xl mx-auto">
+      {/* Controls Header */}
+      <div className="w-full flex justify-end mb-4">
+        <label className="flex items-center cursor-pointer gap-3 bg-white px-4 py-2 rounded-full border border-slate-200 shadow-sm hover:bg-slate-50 transition-colors">
+          <span className="text-sm font-medium text-slate-600">Show Completed</span>
+          <div className="relative">
+            <input 
+              type="checkbox" 
+              className="sr-only peer" 
+              checked={showAll}
+              onChange={(e) => setShowAll(e.target.checked)}
+            />
+            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+          </div>
+        </label>
+      </div>
+
       {/* Progress Bar */}
       <div className="w-full mb-8 flex items-center justify-between text-sm font-medium text-slate-500">
-        <span>Word {currentIndex + 1} of {words.length}</span>
+        <span>Word {currentIndex + 1} of {displayedWords.length}</span>
         <div className="flex-1 mx-6 h-2.5 bg-slate-100 rounded-full overflow-hidden shadow-inner">
           <div 
             className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-500 ease-out rounded-full"
-            style={{ width: `${((currentIndex + 1) / words.length) * 100}%` }}
+            style={{ width: `${((currentIndex + 1) / displayedWords.length) * 100}%` }}
           />
         </div>
-        <span className="text-indigo-600 font-bold">{Math.round(((currentIndex + 1) / words.length) * 100)}%</span>
+        <span className="text-indigo-600 font-bold">{Math.round(((currentIndex + 1) / displayedWords.length) * 100)}%</span>
       </div>
 
       {/* Card Container */}
@@ -123,7 +170,7 @@ export const Flashcards: React.FC<{ unitId: number; lessonId: number }> = ({ uni
       <div className="mt-10 flex items-center justify-center gap-8 w-full">
         <button 
           onClick={() => {
-              setCurrentIndex((prev) => (prev - 1 + words.length) % words.length);
+              setCurrentIndex((prev) => (prev - 1 + displayedWords.length) % displayedWords.length);
               setIsFlipped(false);
           }}
           className="p-5 bg-white border border-slate-200 rounded-full shadow-sm hover:bg-slate-50 hover:shadow-md hover:-translate-y-1 transition-all text-slate-600 group"
@@ -145,7 +192,7 @@ export const Flashcards: React.FC<{ unitId: number; lessonId: number }> = ({ uni
 
         <button 
           onClick={() => {
-              setCurrentIndex((prev) => (prev + 1) % words.length);
+              setCurrentIndex((prev) => (prev + 1) % displayedWords.length);
               setIsFlipped(false);
           }}
           className="p-5 bg-white border border-slate-200 rounded-full shadow-sm hover:bg-slate-50 hover:shadow-md hover:-translate-y-1 transition-all text-slate-600 group"
