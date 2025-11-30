@@ -26,7 +26,7 @@ console.log('Serving client from:', clientBuildPath);
 
 if (require('fs').existsSync(clientBuildPath)) {
   app.use(express.static(clientBuildPath));
-  
+
   // Handle React routing, return all requests to React app
   app.get(/.*/, (req, res) => {
     res.sendFile(path.join(clientBuildPath, 'index.html'));
@@ -35,8 +35,8 @@ if (require('fs').existsSync(clientBuildPath)) {
   console.error(`Client build not found at ${clientBuildPath}. Please run 'npm run build' in the client directory.`);
 }
 
-const server = app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+const server = app.listen(Number(PORT), '0.0.0.0', () => {
+  console.log(`Server is running on http://0.0.0.0:${PORT}`);
 });
 
 server.on('error', (err) => {
