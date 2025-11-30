@@ -156,6 +156,38 @@ router.delete('/words/:id', authenticateToken, async (req, res) => {
   }
 });
 
+// Bulk Create Words
+router.post('/words/bulk', authenticateToken, async (req, res) => {
+  const { unitId, lessonId, words } = req.body;
+  
+  if (!Array.isArray(words)) {
+    res.status(400).json({ error: 'Words must be an array' });
+    return;
+  }
+
+  try {
+    const createdWords = await prisma.$transaction(
+      words.map((w: any) => 
+        prisma.word.create({
+          data: {
+            unitId: parseInt(unitId),
+            lessonId: parseInt(lessonId),
+            word: w.word,
+            phonetic: w.phonetic,
+            englishMeaning: w.englishMeaning,
+            chineseMeaning: w.chineseMeaning,
+            example: w.example,
+          },
+        })
+      )
+    );
+    res.json(createdWords);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to create words' });
+  }
+});
+
 // Create Practice
 router.post('/practices', authenticateToken, async (req, res) => {
   const { unitId, lessonId, practice, answer } = req.body;
@@ -202,6 +234,35 @@ router.delete('/practices/:id', authenticateToken, async (req, res) => {
     res.json({ message: 'Practice deleted' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete practice' });
+  }
+});
+
+// Bulk Create Practices
+router.post('/practices/bulk', authenticateToken, async (req, res) => {
+  const { unitId, lessonId, practices } = req.body;
+  
+  if (!Array.isArray(practices)) {
+    res.status(400).json({ error: 'Practices must be an array' });
+    return;
+  }
+
+  try {
+    const createdPractices = await prisma.$transaction(
+      practices.map((p: any) => 
+        prisma.practice.create({
+          data: {
+            unitId: parseInt(unitId),
+            lessonId: parseInt(lessonId),
+            practice: p.practice,
+            answer: p.answer,
+          },
+        })
+      )
+    );
+    res.json(createdPractices);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to create practices' });
   }
 });
 

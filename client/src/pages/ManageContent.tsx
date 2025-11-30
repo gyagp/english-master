@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Plus, Trash2, Edit2, Save, X, BookOpen, Trophy } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Edit2, Save, X, BookOpen, Trophy, Upload, FileJson } from 'lucide-react';
 
 interface Word {
   id: number;
@@ -32,6 +32,12 @@ export const ManageContent: React.FC = () => {
   // Editing states
   const [editingWord, setEditingWord] = useState<Word | null>(null);
   const [editingPractice, setEditingPractice] = useState<Practice | null>(null);
+
+  // Import states
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importType, setImportType] = useState<'words' | 'practices'>('words');
+  const [importJson, setImportJson] = useState('');
+  const [importError, setImportError] = useState('');
 
   const loadContent = async () => {
     setLoading(true);
@@ -115,8 +121,88 @@ export const ManageContent: React.FC = () => {
     }
   };
 
+  const handleImport = async () => {
+    setImportError('');
+    try {
+      const data = JSON.parse(importJson);
+      if (!Array.isArray(data)) {
+        setImportError('JSON must be an array of objects');
+        return;
+      }
+
+      if (importType === 'words') {
+        await api.post('/words/bulk', { unitId, lessonId, words: data });
+      } else {
+        await api.post('/practices/bulk', { unitId, lessonId, practices: data });
+      }
+      
+      setShowImportModal(false);
+      setImportJson('');
+      loadContent();
+    } catch (error) {
+      console.error("Import failed", error);
+      setImportError('Invalid JSON format or server error');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-20">
+      {/* Import Modal */}
+      {showImportModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+              <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                <FileJson className="w-6 h-6 text-indigo-600" />
+                Import {importType === 'words' ? 'Words' : 'Practices'}
+              </h3>
+              <button onClick={() => setShowImportModal(false)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="p-6">
+              <p className="text-sm text-slate-500 mb-4">
+                Paste your JSON array below. 
+                {importType === 'words' ? (
+                  <span className="block mt-1 bg-slate-50 p-2 rounded border border-slate-200 font-mono text-xs">
+                    [&#123; "word": "Apple", "phonetic": "/.../", "englishMeaning": "...", "chineseMeaning": "...", "example": "..." &#125;]
+                  </span>
+                ) : (
+                  <span className="block mt-1 bg-slate-50 p-2 rounded border border-slate-200 font-mono text-xs">
+                    [&#123; "practice": "I eat an ___.", "answer": "apple" &#125;]
+                  </span>
+                )}
+              </p>
+              <textarea
+                value={importJson}
+                onChange={(e) => setImportJson(e.target.value)}
+                className="w-full h-64 p-4 rounded-xl border border-slate-200 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                placeholder="Paste JSON here..."
+              />
+              {importError && (
+                <div className="mt-4 p-3 bg-red-50 text-red-600 rounded-lg text-sm font-medium">
+                  {importError}
+                </div>
+              )}
+            </div>
+            <div className="p-6 bg-slate-50 flex justify-end gap-3">
+              <button 
+                onClick={() => setShowImportModal(false)}
+                className="px-4 py-2 text-slate-600 font-medium hover:bg-slate-200 rounded-xl transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleImport}
+                className="px-6 py-2 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors flex items-center gap-2"
+              >
+                <Upload className="w-4 h-4" /> Import
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <nav className="bg-white border-b border-slate-200 sticky top-0 z-20">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -161,11 +247,19 @@ export const ManageContent: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Words Section */}
           <div className="space-y-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
-                <BookOpen className="w-5 h-5" />
+            <div className="flex items-center gap-3 mb-4 justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
+                  <BookOpen className="w-5 h-5" />
+                </div>
+                <h2 className="text-xl font-bold text-slate-800">Words</h2>
               </div>
-              <h2 className="text-xl font-bold text-slate-800">Words</h2>
+              <button 
+                onClick={() => { setImportType('words'); setShowImportModal(true); }}
+                className="text-sm text-blue-600 font-medium hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
+              >
+                <FileJson className="w-4 h-4" /> Import JSON
+              </button>
             </div>
 
             {/* Add Word Form */}
@@ -271,11 +365,19 @@ export const ManageContent: React.FC = () => {
 
           {/* Practices Section */}
           <div className="space-y-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-violet-100 rounded-lg text-violet-600">
-                <Trophy className="w-5 h-5" />
+            <div className="flex items-center gap-3 mb-4 justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-violet-100 rounded-lg text-violet-600">
+                  <Trophy className="w-5 h-5" />
+                </div>
+                <h2 className="text-xl font-bold text-slate-800">Practices</h2>
               </div>
-              <h2 className="text-xl font-bold text-slate-800">Practices</h2>
+              <button 
+                onClick={() => { setImportType('practices'); setShowImportModal(true); }}
+                className="text-sm text-violet-600 font-medium hover:bg-violet-50 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
+              >
+                <FileJson className="w-4 h-4" /> Import JSON
+              </button>
             </div>
 
             {/* Add Practice Form */}
