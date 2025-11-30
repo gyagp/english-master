@@ -1,0 +1,75 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  password  String
+  createdAt DateTime @default(now())
+
+  wordProgress     UserWordProgress[]
+  lessonProgress   UserLessonProgress[]
+  practiceProgress UserPracticeProgress[]
+}
+
+model Word {
+  id             Int    @id @default(autoincrement())
+  unitId         Int
+  lessonId       Int
+  word           String
+  phonetic       String
+  englishMeaning String
+  chineseMeaning String
+  example        String
+
+  userProgress UserWordProgress[]
+}
+
+model Practice {
+  id       Int    @id @default(autoincrement())
+  unitId   Int
+  lessonId Int
+  practice String
+  answer   String
+
+  userProgress UserPracticeProgress[]
+}
+
+model UserWordProgress {
+  userId    Int
+  wordId    Int
+  isCompleted Boolean @default(false)
+
+  user User @relation(fields: [userId], references: [id])
+  word Word @relation(fields: [wordId], references: [id])
+
+  @@id([userId, wordId])
+}
+
+model UserLessonProgress {
+  userId      Int
+  unitId      Int
+  lessonId    Int
+  isCompleted Boolean @default(false)
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@id([userId, unitId, lessonId])
+}
+
+model UserPracticeProgress {
+  userId      Int
+  practiceId  Int
+  isCompleted Boolean @default(false)
+
+  user     User     @relation(fields: [userId], references: [id])
+  practice Practice @relation(fields: [practiceId], references: [id])
+
+  @@id([userId, practiceId])
+}
